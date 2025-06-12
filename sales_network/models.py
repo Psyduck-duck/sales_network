@@ -10,22 +10,35 @@ class NetworkElement(models.Model):
     street = models.CharField(verbose_name='Улица')
     building = models.CharField(verbose_name='Строение')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='child')
-    products = models.ForeignKey('sales_network.Product', on_delete=models.DO_NOTHING)
+    products = models.ManyToManyField('sales_network.Product', related_name='product')
     created_at = models.DateTimeField(blank=True, null=True, auto_now_add=True, verbose_name='Дата создания')
-    debt_to_parent = models.FloatField(round(2), blank=True, null=True, default=0)
+    debt_to_parent = models.DecimalField(max_digits=11, decimal_places=2, blank=True, null=True, default=0)
     network_lvl = models.IntegerField(blank=True, null=True, default=0)
 
     def clean(self):
         super().clean()
-        if self.parent and self.parent.count() > 1:
-            raise ValidationError('У звена может быть только один родительский узел')
+
+        if self.parent:
+            if self.parent == self:
+                raise ValidationError('Элемент не может быть родителем самому себе')
+
+            parent = self.parent
+            while parent is not None:
+                if parent == self:
+                    raise ValidationError('Обнаружена циклическая ссылка в иерархии')
+                parent = parent.parent
+
+        if self.parent:
+            self.network_lvl = self.parent.network_lvl + 1
+        else:
+            self.network_lvl = 0
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} (Уровень: {self.network_lvl})"
 
     class Meta:
         verbose_name = 'Звено сети'
