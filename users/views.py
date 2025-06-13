@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from users.serializers import UserSerializer
 from .models import User
+from .permissions import IsActiveUser
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -17,6 +18,6 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             self.permission_classes = [AllowAny]
         else:
-            self.permission_classes = [IsAuthenticated]
+            self.permission_classes = [IsAuthenticated, IsActiveUser]
 
         return [permission() for permission in self.permission_classes]
