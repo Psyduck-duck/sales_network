@@ -15,10 +15,3 @@ class NetworkElementViewSet(viewsets.ModelViewSet):
     queryset = NetworkElement.objects.all()
     serializer_class = NetworkElementSerializer
     # permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        new_element = serializer.save()
-        if new_element.parent:
-            new_element.network_lvl = new_element.parent.network_lvl + 1
-        else:
-            new_element.network_lvl = 0
