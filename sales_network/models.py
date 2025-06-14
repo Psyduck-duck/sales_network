@@ -35,8 +35,7 @@ class NetworkElement(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        if self.pk:  # Если объект уже существует (обновление)
-            # Получаем оригинальное значение из базы
+        if self.pk:
             original = NetworkElement.objects.get(pk=self.pk)
             self.debt_to_parent = original.debt_to_parent
         super().save(*args, **kwargs)
