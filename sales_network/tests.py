@@ -48,7 +48,7 @@ class ProductTestCase(APITestCase):
             Product.objects.all().count(), 2
         )
 
-    def test_course_update(self):
+    def test_product_update(self):
         url = reverse('network:product-detail', args=(self.product.pk,))
         data = {'name': 'product 2 new', 'model': 'model 2.1'}
         response = self.client.patch(url, data, format='json')
@@ -59,7 +59,7 @@ class ProductTestCase(APITestCase):
             response.json()['name'], 'product 2 new'
         )
 
-    def test_course_delete(self):
+    def test_product_delete(self):
         url = reverse('network:product-detail', args=(self.product.pk,))
         response = self.client.delete(url)
         self.assertEqual(
@@ -123,8 +123,8 @@ class NetworkElementTestCase(APITestCase):
         url = reverse('network:network-list', )
         data = {"name": "element 2",
                 "email": "mail2@mail.com",
-                "country": "Russia",
-                "city": "Moscow",
+                "country": "USA",
+                "city": "Florida",
                 "street": "Volodarskogo",
                 "building": "5",
                 "debt_to_parent": "150.12",
@@ -144,6 +144,17 @@ class NetworkElementTestCase(APITestCase):
         self.assertEqual(
             new_element.network_lvl, 1
         )
+
+        response_Russia = self.client.get(url, {'country': 'Russia'})
+        self.assertEqual(response_Russia.status_code, 200)
+        self.assertEqual(len(response_Russia.data), 1)
+        self.assertEqual(response_Russia.data[0]['country'], 'Russia')
+
+        response_USA = self.client.get(url, {'country': 'USA'})
+        self.assertEqual(response_USA.status_code, 200)
+        self.assertEqual(len(response_USA.data), 1)
+        self.assertEqual(response_USA.data[0]['country'], 'USA')
+
 
     def test_element_update(self):
         url = reverse('network:network-detail', args=(self.element.pk,))
