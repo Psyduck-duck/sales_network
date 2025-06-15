@@ -1,7 +1,10 @@
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from datetime import datetime
+from django.test import TestCase
+from django.core.exceptions import ValidationError
 
 from .models import Product, NetworkElement
 from users.models import User
@@ -175,3 +178,135 @@ class NetworkElementTestCase(APITestCase):
         self.assertEqual(
             float(response.json()['debt_to_parent']), float(old_debt)
         )
+
+
+class NetworkElementCleanMethodTests(TestCase):
+    def setUp(self):
+        # Создаем базовые элементы для тестирования
+        self.root = NetworkElement.objects.create(
+            name='Root Element',
+            email='root@example.com',
+            country='Country',
+            city='City',
+            street='Street',
+            building='1'
+        )
+
+        self.child1 = NetworkElement.objects.create(
+            name='Child 1',
+            email='child1@example.com',
+            country='Country',
+            city='City',
+            street='Street',
+            building='2',
+            parent=self.root
+        )
+
+        self.child2 = NetworkElement.objects.create(
+            name='Child 2',
+            email='child2@example.com',
+            country='Country',
+            city='City',
+            street='Street',
+            building='3',
+            parent=self.root
+        )
+
+    def test_valid_parent_assignment(self):
+        """Тест корректного назначения родителя"""
+        grandchild = NetworkElement(
+            name='Grandchild',
+            email='grandchild@example.com',
+            country='Country',
+            city='City',
+            street='Street',
+            building='4',
+            parent=self.child1
+        )
+
+        try:
+            grandchild.full_clean()  # Вызывает clean() и другие валидации
+        except ValidationError:
+            self.fail("Valid parent assignment raised ValidationError unexpectedly")
+
+    def test_self_reference_validation(self):
+        """Тест валидации ссылки на самого себя"""
+        element = NetworkElement.objects.get(pk=self.root.pk)
+        element.parent = element
+
+        with self.assertRaises(ValidationError) as context:
+            element.full_clean()
+
+        self.assertIn('Элемент не может быть родителем самому себе', str(context.exception))
+
+    def test_direct_cycle_detection(self):
+        """Тест обнаружения прямой циклической ссылки"""
+        self.root.parent = self.child1
+        with self.assertRaises(ValidationError) as context:
+            self.root.full_clean()
+
+        self.assertIn('Обнаружена циклическая ссылка в иерархии', str(context.exception))
+
+    def test_indirect_cycle_detection(self):
+        """Тест обнаружения косвенной циклической ссылки"""
+        grandchild = NetworkElement.objects.create(
+            name='Grandchild',
+            email='grandchild@example.com',
+            country='Country',
+            city='City',
+            street='Street',
+            building='4',
+            parent=self.child1
+        )
+
+        # Создаем циклическую ссылку: root -> child1 -> grandchild -> root
+        self.root.parent = grandchild
+
+        with self.assertRaises(ValidationError) as context:
+            self.root.full_clean()
+
+        self.assertIn('Обнаружена циклическая ссылка в иерархии', str(context.exception))
+
+    def test_network_level_calculation_with_parent(self):
+        """Тест вычисления network_lvl при наличии родителя"""
+        grandchild = NetworkElement(
+            name='Grandchild',
+            email='grandchild@example.com',
+            country='Country',
+            city='City',
+            street='Street',
+            building='4',
+            parent=self.child1
+        )
+        grandchild.full_clean()
+        self.assertEqual(grandchild.network_lvl, 2)
+
+    def test_network_level_calculation_without_parent(self):
+        """Тест вычисления network_lvl при отсутствии родителя"""
+        new_element = NetworkElement(
+            name='New Element',
+            email='new@example.com',
+            country='Country',
+            city='City',
+            street='Street',
+            building='5'
+        )
+        new_element.full_clean()
+        self.assertEqual(new_element.network_lvl, 0)
+
+
+class InactiveUserTestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create(username='user', is_active=False )
+        self.client.force_authenticate(user=self.user)
+
+
+    def test_product_list_inactive_user(self):
+        url = reverse('network:product-list', )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_network_list_inactive_user(self):
+        url = reverse('network:network-list', )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
