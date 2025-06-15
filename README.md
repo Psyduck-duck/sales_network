@@ -1,4 +1,4 @@
-# Sales Network
+e# Sales Network
 
 проект для построения иерархического древа продажи (поставок) продуктов
 
@@ -16,3 +16,10 @@
 - Добавлен DjangoFilterBackend для фильтрации NetworkElement по стране.
 
 ## Установка
+
+1. Клонируйте репозиторий:
+```commandline
+https://github.com/Psyduck-duck/sales_network.git
+```
+2. Создайте .env file согласно .env sample
+3. Загрузите все зависимости согласно файлу requirements.txt
