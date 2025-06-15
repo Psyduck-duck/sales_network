@@ -11,6 +11,7 @@ def make_zero_debt(modeladmin, request, queryset):
 @admin.register(NetworkElement)
 class CustomUserAdmin(admin.ModelAdmin):
     list_display = ('name','network_lvl', 'email', 'debt_to_parent', 'parent')
+    list_display_links = ('parent', )
     # search_fields = ('city',)
     ordering = ('city',)
     actions = [make_zero_debt]
